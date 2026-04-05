@@ -1,0 +1,100 @@
+﻿CREATE DATABASE SistemaQuizYatchay;
+GO
+
+USE SistemaQuizYatchay;
+GO
+
+
+CREATE TABLE Rol (
+    id_rol  INT IDENTITY(1,1) PRIMARY KEY,
+    nombre  VARCHAR(20) NOT NULL UNIQUE
+);
+GO
+
+INSERT INTO Rol (nombre) VALUES ('estudiante'), ('analista');
+GO
+
+CREATE TABLE Usuario (
+    id_usuario          INT IDENTITY(1,1) PRIMARY KEY,
+    nombre              VARCHAR(100)    NOT NULL,
+    apellido            VARCHAR(100)    NOT NULL,
+    correo              VARCHAR(150)    NOT NULL UNIQUE,
+    contrasena_hash     VARCHAR(255)    NOT NULL,
+    contrasena_literal  VARCHAR(255)    NULL,
+    dni                 VARCHAR(20)     NOT NULL UNIQUE,
+    id_rol              INT             NOT NULL,
+    fecha_registro      DATETIME        NOT NULL DEFAULT GETDATE(),
+    fecha_actualizacion DATETIME        NULL,
+    CONSTRAINT FK_Usuario_Rol FOREIGN KEY (id_rol) REFERENCES Rol(id_rol)
+);
+GO
+
+CREATE PROCEDURE sp_Usuario_Insertar
+    @Nombre NVARCHAR(100),
+    @Apellido NVARCHAR(100),
+    @Correo NVARCHAR(150),
+    @ContrasenaHash NVARCHAR(255),
+    @ContrasenalLiteral NVARCHAR(255),
+    @DNI NVARCHAR(20),
+    @IdRol INT
+AS
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM Rol WHERE id_rol = @IdRol)
+    BEGIN
+        SELECT 0 AS Exito, 'Rol inválido' AS Mensaje;
+        RETURN;
+    END
+    
+    IF EXISTS (SELECT 1 FROM Usuario WHERE correo = @Correo)
+    BEGIN
+        SELECT 0 AS Exito, 'Correo ya registrado' AS Mensaje;
+        RETURN;
+    END
+    
+    IF EXISTS (SELECT 1 FROM Usuario WHERE dni = @DNI)
+    BEGIN
+        SELECT 0 AS Exito, 'DNI ya registrado' AS Mensaje;
+        RETURN;
+    END
+    
+    INSERT INTO Usuario (nombre, apellido, correo, contrasena_hash, contrasena_literal, dni, id_rol)
+    VALUES (@Nombre, @Apellido, @Correo, @ContrasenaHash, @ContrasenalLiteral, @DNI, @IdRol);
+    
+    SELECT 1 AS Exito, 'Usuario registrado' AS Mensaje;
+END
+GO
+
+CREATE PROCEDURE sp_Usuario_Login
+    @Correo NVARCHAR(150),
+    @ContrasenaHash NVARCHAR(255)
+AS
+BEGIN
+    SELECT u.id_usuario, u.nombre, u.id_rol, r.nombre AS NombreRol
+    FROM Usuario u
+    INNER JOIN Rol r ON u.id_rol = r.id_rol
+    WHERE u.correo = @Correo AND u.contrasena_hash = @ContrasenaHash;
+END
+GO
+
+
+SELECT * FROM Rol
+
+SELECT id_usuario, nombre, apellido, correo, dni, id_rol, fecha_registro
+FROM Usuario;
+GO
+
+SELECT 
+    u.id_usuario,
+    u.nombre,
+    u.apellido,
+    u.correo,
+    u.contrasena_hash,
+    u.contrasena_literal,
+    u.dni,
+    u.id_rol,
+    r.nombre AS rol,
+    u.fecha_registro
+FROM Usuario u
+INNER JOIN Rol r ON u.id_rol = r.id_rol
+ORDER BY u.id_usuario;
+GO
