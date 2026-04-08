@@ -1,7 +1,9 @@
 ﻿using APISPROYECTOYATCHAY.Contracts.Dtos;
 using APISPROYECTOYATCHAY.Repositories.Interfaces;
+using Dapper;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using System.Text.RegularExpressions;
 
 namespace APISPROYECTOYATCHAY.Repositories
 {
@@ -14,56 +16,73 @@ namespace APISPROYECTOYATCHAY.Repositories
             _connectionString = config.GetConnectionString("Default")!;
         }
 
-        // Registrar usuario
         public async Task<int> RegistrarAsync(RegistroDto registro, string contrasenaHash)
         {
             using var conn = new SqlConnection(_connectionString);
-            await conn.OpenAsync();
-
-            using var cmd = new SqlCommand("sp_Usuario_Insertar", conn)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
-
-            cmd.Parameters.AddWithValue("@Nombre", registro.Nombre);
-            cmd.Parameters.AddWithValue("@Apellido", registro.Apellido);
-            cmd.Parameters.AddWithValue("@Correo", registro.Correo);
-            cmd.Parameters.AddWithValue("@ContrasenaHash", contrasenaHash);
-            cmd.Parameters.AddWithValue("@ContrasenalLiteral", registro.Contrasena);
-            cmd.Parameters.AddWithValue("@DNI", registro.DNI);
-            cmd.Parameters.AddWithValue("@IdRol", registro.IdRol);
-
-            await cmd.ExecuteNonQueryAsync();
-            return 1;
+            return await conn.ExecuteScalarAsync<int>(
+                "sp_Usuario_Insertar",
+                new
+                {
+                    registro.Nombre,
+                    registro.Apellido,
+                    registro.Correo,
+                    ContrasenaHash = contrasenaHash,
+                    ContrasenalLiteral = registro.Contrasena,
+                    registro.DNI,
+                    registro.IdRol
+                },
+                commandType: CommandType.StoredProcedure);
         }
 
-        // Login usuario
         public async Task<LoginResponseDto?> LoginAsync(string correo, string contrasenaHash)
         {
             using var conn = new SqlConnection(_connectionString);
-            await conn.OpenAsync();
+            return await conn.QueryFirstOrDefaultAsync<LoginResponseDto>(
+                "sp_Usuario_Login",
+                new { Correo = correo, ContrasenaHash = contrasenaHash },
+                commandType: CommandType.StoredProcedure);
+        }
 
-            using var cmd = new SqlCommand("sp_Usuario_Login", conn)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
+        public async Task<bool> CorreoExisteAsync(string correo)
+        {
+            using var conn = new SqlConnection(_connectionString);
+            var existe = await conn.QueryFirstOrDefaultAsync<int>(
+                "SELECT COUNT(*) FROM Usuario WHERE correo = @Correo",
+                new { Correo = correo });
+            return existe > 0;
+        }
 
-            cmd.Parameters.AddWithValue("@Correo", correo);
-            cmd.Parameters.AddWithValue("@ContrasenaHash", contrasenaHash);
+        public async Task<bool> ContraseñaEsValidaAsync(string contrasena)
+        {
+            if (contrasena.Length < 6)
+                return false;
 
-            using var reader = await cmd.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                return new LoginResponseDto
-                {
-                    IdUsuario = reader.GetInt32(0),
-                    Nombre = reader.GetString(1),
-                    IdRol = reader.GetInt32(2),
-                    NombreRol = reader.GetString(3)
-                };
-            }
+            if (!Regex.IsMatch(contrasena, @"[A-Z]"))
+                return false;
 
-            return null;
+            if (!Regex.IsMatch(contrasena, @"[0-9]"))
+                return false;
+
+            if (!Regex.IsMatch(contrasena, @"[#$%&@]"))
+                return false;
+
+            return await Task.FromResult(true);
+        }
+
+        public async Task<bool> DNIEsValidoAsync(string dni)
+        {
+            if (!Regex.IsMatch(dni, @"^\d{8}$"))
+                return false;
+
+            using var conn = new SqlConnection(_connectionString);
+            var existe = await conn.QueryFirstOrDefaultAsync<int>(
+                "SELECT COUNT(*) FROM Usuario WHERE dni = @DNI",
+                new { DNI = dni });
+            
+            if (existe > 0)
+                return false;
+
+            return await Task.FromResult(true);
         }
     }
 }

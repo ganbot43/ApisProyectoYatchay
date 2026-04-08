@@ -1,6 +1,7 @@
 ﻿using APISPROYECTOYATCHAY.Contracts.Dtos;
 using APISPROYECTOYATCHAY.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -27,19 +28,55 @@ namespace APISPROYECTOYATCHAY.Controllers
             }
         }
 
+        // Crear respuesta de validación
+        private IActionResult RespuestaValidacionFallida(ModelStateDictionary modelState)
+        {
+            var errores = modelState.Values
+                .SelectMany(v => v.Errors)
+                .Where(e => !string.IsNullOrWhiteSpace(e.ErrorMessage))
+                .Select(e => e.ErrorMessage)
+                .ToList();
+            
+            return BadRequest(new 
+            { 
+                exito = 0, 
+                mensaje = "Validación fallida", 
+                errores = errores.Any() ? errores : new List<string> { "Error de validación" }
+            });
+        }
+
         // POST: api/usuarios/registro
         [HttpPost("registro")]
         public async Task<IActionResult> Registro([FromBody] RegistroDto registro)
         {
+            if (registro == null)
+                return BadRequest(new { exito = 0, mensaje = "El cuerpo de la solicitud es requerido" });
+
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                return RespuestaValidacionFallida(ModelState);
 
             try
             {
+                // Verificar si la contraseña es válida
+                var contraseñaValida = await _repo.ContraseñaEsValidaAsync(registro.Contrasena);
+                if (!contraseñaValida)
+                    return BadRequest(new { exito = 0, mensaje = "La contraseña debe tener al menos 6 caracteres, incluir una mayúscula, un número y un carácter especial (#$%&@)" });
+
+                // Verificar si el correo ya existe
+                var correoExiste = await _repo.CorreoExisteAsync(registro.Correo);
+                if (correoExiste)
+                    return BadRequest(new { exito = 0, mensaje = $"El correo '{registro.Correo}' ya está registrado en el sistema" });
+
+                // Verificar si el DNI es válido y no existe
+                var dniValido = await _repo.DNIEsValidoAsync(registro.DNI);
+                if (!dniValido)
+                    return BadRequest(new { exito = 0, mensaje = "El DNI debe tener exactamente 8 dígitos y no estar registrado" });
+
                 var contrasenaHash = HashearContrasena(registro.Contrasena);
-                
-                // Pasar ambas: hash y literal
-                await _repo.RegistrarAsync(registro, contrasenaHash);
+                var resultado = await _repo.RegistrarAsync(registro, contrasenaHash);
+
+                if (resultado <= 0)
+                    return BadRequest(new { exito = 0, mensaje = "Error al registrar el usuario" });
 
                 return Ok(new { exito = 1, mensaje = "Usuario registrado exitosamente" });
             }
@@ -53,8 +90,11 @@ namespace APISPROYECTOYATCHAY.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto login)
         {
+            if (login == null)
+                return BadRequest(new { exito = 0, mensaje = "El cuerpo de la solicitud es requerido" });
+
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                return RespuestaValidacionFallida(ModelState);
 
             try
             {
