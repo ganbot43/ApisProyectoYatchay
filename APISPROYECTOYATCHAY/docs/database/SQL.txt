@@ -176,5 +176,21 @@ INSERT INTO SimulationContent (fase, tipo, titulo, opciones, feedback, orden) VA
 1);
 GO
 
+-- DATOS DE PRUEBA ADICIONALES
+INSERT INTO SimulationContent (fase, tipo, titulo, opciones, feedback, orden) VALUES
+(1, 'RIESGO', '¿Qué haces ante un problema?', 
+'[{"id": 1, "texto": "Ignorar", "puntaje": 0}, {"id": 2, "texto": "Analizar", "puntaje": 10}, {"id": 3, "texto": "Escalar", "puntaje": 5}]',
+'[{"id": 1, "titulo": "Mala decisión", "texto": "Ignorar problemas no los resuelve", "resultado": "error"}, {"id": 2, "titulo": "Buena decisión", "texto": "Analizar es el primer paso correcto", "resultado": "éxito"}, {"id": 3, "titulo": "Regular", "texto": "Escalar es una opción pero debe analizarse primero", "resultado": "parcial"}]',
+2),
+(2, 'SEGURIDAD', 'Detectas una vulnerabilidad, ¿qué haces?', 
+'[{"id": 1, "texto": "Reportar", "puntaje": 10}, {"id": 2, "texto": "Ignorar", "puntaje": 0}, {"id": 3, "texto": "Corregir", "puntaje": 8}]',
+'[{"id": 1, "titulo": "Correcto", "texto": "Reportar vulnerabilidades es lo correcto", "resultado": "éxito"}, {"id": 2, "titulo": "Incorrecto", "texto": "Ignorar vulnerabilidades pone en riesgo el sistema", "resultado": "error"}, {"id": 3, "titulo": "Bien", "texto": "Corregir sin reportar puede dejar brechas", "resultado": "parcial"}]',
+1),
+(3, 'GESTION', 'El equipo falla, ¿cómo actúas?', 
+'[{"id": 1, "texto": "Culpar", "puntaje": 0}, {"id": 2, "texto": "Apoyar", "puntaje": 10}, {"id": 3, "texto": "Reorganizar", "puntaje": 6}]',
+'[{"id": 1, "titulo": "Negativo", "texto": "Culpar daña el equipo y no resuelve nada", "resultado": "error"}, {"id": 2, "titulo": "Positivo", "texto": "Apoyar al equipo es liderazgo efectivo", "resultado": "éxito"}, {"id": 3, "titulo": "Aceptable", "texto": "Reorganizar puede ayudar pero requiere apoyo", "resultado": "parcial"}]',
+1);
+GO
+
 SELECT 1 AS Exito, 'Datos de prueba insertados' AS Mensaje;
 GO
