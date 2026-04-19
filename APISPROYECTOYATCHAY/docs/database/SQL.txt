@@ -39,7 +39,6 @@ CREATE PROCEDURE sp_Usuario_Insertar
     @IdRol INT
 AS
 BEGIN
-    -- Validar formato del correo
     IF @Correo NOT LIKE 'i[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]@cibertec.edu.pe'
     BEGIN
         SELECT 0 AS Exito, 'El correo debe tener formato: i#########@cibertec.edu.pe' AS Mensaje;
@@ -115,4 +114,67 @@ SELECT
 FROM Usuario u
 INNER JOIN Rol r ON u.id_rol = r.id_rol
 ORDER BY u.id_usuario;
+GO
+
+-- TABLAS DEL SIMULADOR
+CREATE TABLE SimulationContent (
+    id_content INT IDENTITY(1,1) PRIMARY KEY,
+    fase INT NOT NULL,
+    tipo VARCHAR(50) NOT NULL,
+    titulo NVARCHAR(255) NOT NULL,
+    opciones NVARCHAR(MAX) NOT NULL, -- JSON con las opciones
+    feedback NVARCHAR(MAX) NOT NULL, -- JSON con feedback
+    orden INT NOT NULL,
+    creado_at DATETIME NOT NULL DEFAULT GETDATE(),
+    actualizado_at DATETIME NULL
+);
+GO
+
+CREATE TABLE SimulationSession (
+    id_session INT IDENTITY(1,1) PRIMARY KEY,
+    id_usuario INT NOT NULL,
+    fase_actual INT NOT NULL DEFAULT 1,
+    estado VARCHAR(20) NOT NULL DEFAULT 'EN_PROGRESO', -- EN_PROGRESO, COMPLETADO
+    puntaje_total INT NOT NULL DEFAULT 0,
+    iniciado_at DATETIME NOT NULL DEFAULT GETDATE(),
+    finalizado_at DATETIME NULL,
+    CONSTRAINT FK_SimulationSession_Usuario FOREIGN KEY (id_usuario) REFERENCES Usuario(id_usuario)
+);
+GO
+
+CREATE TABLE Decision (
+    id_decision INT IDENTITY(1,1) PRIMARY KEY,
+    id_session INT NOT NULL,
+    id_content INT NOT NULL,
+    fase INT NOT NULL,
+    opcion_elegida INT NOT NULL,
+    puntaje_obtenido INT NOT NULL,
+    decidido_at DATETIME NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT FK_Decision_SimulationSession FOREIGN KEY (id_session) REFERENCES SimulationSession(id_session),
+    CONSTRAINT FK_Decision_SimulationContent FOREIGN KEY (id_content) REFERENCES SimulationContent(id_content),
+    -- UNIQUE para inmutabilidad: una decisión por contenido por sesión
+    UNIQUE(id_session, id_content)
+);
+GO
+
+-- ÍNDICES para optimizar búsquedas
+CREATE INDEX IX_SimulationSession_Usuario ON SimulationSession(id_usuario);
+CREATE INDEX IX_Decision_Session ON Decision(id_session);
+CREATE INDEX IX_Decision_Session_Content ON Decision(id_session, id_content);
+CREATE INDEX IX_SimulationContent_Fase ON SimulationContent(fase);
+GO
+
+-- DATOS DE PRUEBA
+INSERT INTO SimulationContent (fase, tipo, titulo, opciones, feedback, orden) VALUES
+(1, 'pregunta', 'Fase 1: Decisión Inicial', 
+'[{"id": 1, "texto": "Opción A", "puntaje": 10}, {"id": 2, "texto": "Opción B", "puntaje": 5}, {"id": 3, "texto": "Opción C", "puntaje": 0}]',
+'[{"id": 1, "titulo": "Correcto", "texto": "Excelente decisión", "resultado": "éxito"}, {"id": 2, "titulo": "Regular", "texto": "Podrías mejorar", "resultado": "parcial"}, {"id": 3, "titulo": "Incorrecto", "texto": "Necesitas repensar", "resultado": "error"}]',
+1),
+(2, 'pregunta', 'Fase 2: Decisión Estratégica', 
+'[{"id": 1, "texto": "Estrategia 1", "puntaje": 15}, {"id": 2, "texto": "Estrategia 2", "puntaje": 8}]',
+'[{"id": 1, "titulo": "Estrategia óptima", "texto": "Esta es la mejor ruta", "resultado": "éxito"}, {"id": 2, "titulo": "Alternativa", "texto": "También funciona", "resultado": "parcial"}]',
+1);
+GO
+
+SELECT 1 AS Exito, 'Datos de prueba insertados' AS Mensaje;
 GO

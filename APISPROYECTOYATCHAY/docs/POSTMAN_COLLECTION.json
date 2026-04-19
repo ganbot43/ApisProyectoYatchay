@@ -1,0 +1,181 @@
+{
+  "info": {
+    "name": "API Simulador Yatchay",
+    "description": "Colección de endpoints para el simulador de decisiones",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Simulación",
+      "item": [
+        {
+          "name": "1. Iniciar Sesión",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idUsuario\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/simulation/start",
+              "host": ["{{base_url}}"],
+              "path": ["api", "simulation", "start"]
+            },
+            "description": "Inicia una nueva sesión de simulación o retorna la sesión activa del usuario"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Obtener Estado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/simulation/status/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "simulation", "status", "1"]
+            },
+            "description": "Obtiene el estado actual de una sesión (fase, puntaje, etc)"
+          },
+          "response": []
+        },
+        {
+          "name": "3. Obtener Contenido Fase",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/simulation/content/1/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "simulation", "content", "1", "1"]
+            },
+            "description": "Obtiene el contenido (preguntas y opciones) de una fase específica"
+          },
+          "response": []
+        },
+        {
+          "name": "4. Guardar Decisión",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idSession\": 1,\n  \"idContent\": 1,\n  \"opcionElegida\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/simulation/decide",
+              "host": ["{{base_url}}"],
+              "path": ["api", "simulation", "decide"]
+            },
+            "description": "Guarda la decisión del usuario (INMUTABLE - solo una vez por pregunta)"
+          },
+          "response": []
+        },
+        {
+          "name": "5. Obtener Historial",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/simulation/history/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "simulation", "history", "1"]
+            },
+            "description": "Obtiene el historial de todas las decisiones tomadas en la sesión"
+          },
+          "response": []
+        },
+        {
+          "name": "? TEST: Duplicar Decisión (Debe fallar 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idSession\": 1,\n  \"idContent\": 1,\n  \"opcionElegida\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/simulation/decide",
+              "host": ["{{base_url}}"],
+              "path": ["api", "simulation", "decide"]
+            },
+            "description": "Intenta guardar una decisión para un contenido ya respondido (debe retornar 403 Forbidden)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Usuarios",
+      "item": [
+        {
+          "name": "Registro",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Pérez\",\n  \"correo\": \"i123456789@cibertec.edu.pe\",\n  \"contrasena\": \"Contraseña123@\",\n  \"dni\": \"12345678\",\n  \"idRol\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/usuarios/registro",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios", "registro"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"i123456789@cibertec.edu.pe\",\n  \"contrasena\": \"Contraseña123@\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/usuarios/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "usuarios", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://localhost:5001",
+      "type": "string"
+    }
+  ]
+}

@@ -1,5 +1,8 @@
 using APISPROYECTOYATCHAY.Repositories;
 using APISPROYECTOYATCHAY.Repositories.Interfaces;
+using APISPROYECTOYATCHAY.Services;
+using APISPROYECTOYATCHAY.Services.Interfaces;
+using APISPROYECTOYATCHAY.Exceptions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -18,8 +21,16 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Registrar repositorio
+// Registrar Repositories - Usuario
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+
+// Registrar Repositories - Simulación
+builder.Services.AddScoped<ISimulationContentRepository, SimulationContentRepository>();
+builder.Services.AddScoped<ISimulationSessionRepository, SimulationSessionRepository>();
+builder.Services.AddScoped<IDecisionRepository, DecisionRepository>();
+
+// Registrar Services
+builder.Services.AddScoped<ISimulationService, SimulationService>();
 
 var app = builder.Build();
 
@@ -33,6 +44,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
+
+// Middleware para excepciones globales
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.MapControllers();
 

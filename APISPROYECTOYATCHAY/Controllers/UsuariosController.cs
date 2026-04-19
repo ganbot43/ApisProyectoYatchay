@@ -57,17 +57,14 @@ namespace APISPROYECTOYATCHAY.Controllers
 
             try
             {
-                // Verificar si la contraseña es válida
                 var contraseñaValida = await _repo.ContraseñaEsValidaAsync(registro.Contrasena);
                 if (!contraseñaValida)
                     return BadRequest(new { exito = 0, mensaje = "La contraseña debe tener al menos 6 caracteres, incluir una mayúscula, un número y un carácter especial (#$%&@)" });
 
-                // Verificar si el correo ya existe
                 var correoExiste = await _repo.CorreoExisteAsync(registro.Correo);
                 if (correoExiste)
                     return BadRequest(new { exito = 0, mensaje = $"El correo '{registro.Correo}' ya está registrado en el sistema" });
 
-                // Verificar si el DNI es válido y no existe
                 var dniValido = await _repo.DNIEsValidoAsync(registro.DNI);
                 if (!dniValido)
                     return BadRequest(new { exito = 0, mensaje = "El DNI debe tener exactamente 8 dígitos y no estar registrado" });
