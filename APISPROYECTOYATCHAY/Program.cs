@@ -1,8 +1,8 @@
-using APISPROYECTOYATCHAY.Repositories;
-using APISPROYECTOYATCHAY.Repositories.Interfaces;
-using APISPROYECTOYATCHAY.Services;
-using APISPROYECTOYATCHAY.Services.Interfaces;
-using APISPROYECTOYATCHAY.Exceptions;
+using APISPROYECTOYATCHAY.Features.Authentication.Repositories;
+using APISPROYECTOYATCHAY.Features.Simulation.Repositories;
+using APISPROYECTOYATCHAY.Features.Simulation.Repositories.Implementations;
+using APISPROYECTOYATCHAY.Features.Simulation.Services;
+using APISPROYECTOYATCHAY.Common.Middleware;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -21,15 +21,13 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Registrar Repositories - Usuario
+// Register Authentication Dependencies
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 
-// Registrar Repositories - Simulación
+// Register Simulation Dependencies
 builder.Services.AddScoped<ISimulationContentRepository, SimulationContentRepository>();
 builder.Services.AddScoped<ISimulationSessionRepository, SimulationSessionRepository>();
 builder.Services.AddScoped<IDecisionRepository, DecisionRepository>();
-
-// Registrar Services
 builder.Services.AddScoped<ISimulationService, SimulationService>();
 
 var app = builder.Build();
@@ -45,7 +43,7 @@ app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
-// Middleware para excepciones globales
+// Middleware global para excepciones
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.MapControllers();

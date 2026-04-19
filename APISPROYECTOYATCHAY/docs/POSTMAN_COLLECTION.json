@@ -1,15 +1,15 @@
 {
   "info": {
     "name": "API Simulador Yatchay",
-    "description": "Colección de endpoints para el simulador de decisiones",
+    "description": "Colecciï¿½n de endpoints para el simulador de decisiones",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "Simulación",
+      "name": "Simulaciï¿½n",
       "item": [
         {
-          "name": "1. Iniciar Sesión",
+          "name": "1. Iniciar Sesion",
           "request": {
             "method": "POST",
             "header": [
@@ -27,7 +27,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "simulation", "start"]
             },
-            "description": "Inicia una nueva sesión de simulación o retorna la sesión activa del usuario"
+            "description": "Inicia una nueva sesion de simulacion o retorna la sesion activa del usuario"
           },
           "response": []
         },
@@ -41,7 +41,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "simulation", "status", "1"]
             },
-            "description": "Obtiene el estado actual de una sesión (fase, puntaje, etc)"
+            "description": "Obtiene el estado actual de una sesion (fase, puntaje, etc)"
           },
           "response": []
         },
@@ -55,12 +55,12 @@
               "host": ["{{base_url}}"],
               "path": ["api", "simulation", "content", "1", "1"]
             },
-            "description": "Obtiene el contenido (preguntas y opciones) de una fase específica"
+            "description": "Obtiene el contenido (preguntas y opciones) de una fase especifica"
           },
           "response": []
         },
         {
-          "name": "4. Guardar Decisión",
+          "name": "4. Guardar Decisiï¿½n",
           "request": {
             "method": "POST",
             "header": [
@@ -78,7 +78,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "simulation", "decide"]
             },
-            "description": "Guarda la decisión del usuario (INMUTABLE - solo una vez por pregunta)"
+            "description": "Guarda la decision del usuario (INMUTABLE - solo una vez por pregunta)"
           },
           "response": []
         },
@@ -92,12 +92,12 @@
               "host": ["{{base_url}}"],
               "path": ["api", "simulation", "history", "1"]
             },
-            "description": "Obtiene el historial de todas las decisiones tomadas en la sesión"
+            "description": "Obtiene el historial de todas las decisiones tomadas en la sesion"
           },
           "response": []
         },
         {
-          "name": "? TEST: Duplicar Decisión (Debe fallar 403)",
+          "name": "? TEST: Duplicar Decisiï¿½n (Debe fallar 403)",
           "request": {
             "method": "POST",
             "header": [
@@ -115,7 +115,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "simulation", "decide"]
             },
-            "description": "Intenta guardar una decisión para un contenido ya respondido (debe retornar 403 Forbidden)"
+            "description": "Intenta guardar una decisiï¿½n para un contenido ya respondido (debe retornar 403 Forbidden)"
           },
           "response": []
         }
@@ -136,7 +136,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Pérez\",\n  \"correo\": \"i123456789@cibertec.edu.pe\",\n  \"contrasena\": \"Contraseña123@\",\n  \"dni\": \"12345678\",\n  \"idRol\": 1\n}"
+              "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Perez\",\n  \"correo\": \"i123456789@cibertec.edu.pe\",\n  \"contrasena\": \"ContraseÃ±a123@\",\n  \"dni\": \"12345678\",\n  \"idRol\": 1\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/usuarios/registro",
@@ -158,7 +158,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"correo\": \"i123456789@cibertec.edu.pe\",\n  \"contrasena\": \"Contraseña123@\"\n}"
+              "raw": "{\n  \"correo\": \"i123456789@cibertec.edu.pe\",\n  \"contrasena\": \"ContraseÃ±a123@\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/usuarios/login",
