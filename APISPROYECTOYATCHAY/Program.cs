@@ -26,6 +26,7 @@ builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 
 // Register Simulation Dependencies
 builder.Services.AddScoped<ISimulationContentRepository, SimulationContentRepository>();
+builder.Services.AddScoped<ISimulationOptionRepository, SimulationOptionRepository>();
 builder.Services.AddScoped<ISimulationSessionRepository, SimulationSessionRepository>();
 builder.Services.AddScoped<IDecisionRepository, DecisionRepository>();
 builder.Services.AddScoped<ISimulationService, SimulationService>();

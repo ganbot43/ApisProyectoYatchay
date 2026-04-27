@@ -1,7 +1,6 @@
 using APISPROYECTOYATCHAY.Features.Simulation.Dtos;
 using APISPROYECTOYATCHAY.Features.Simulation.Models;
 using APISPROYECTOYATCHAY.Features.Simulation.Repositories;
-using System.Text.Json;
 
 namespace APISPROYECTOYATCHAY.Features.Simulation.Services
 {
@@ -9,17 +8,20 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Services
     {
         private readonly ISimulationSessionRepository _sessionRepo;
         private readonly ISimulationContentRepository _contentRepo;
+        private readonly ISimulationOptionRepository _optionRepo;
         private readonly IDecisionRepository _decisionRepo;
         private readonly ILogger<SimulationService> _logger;
 
         public SimulationService(
             ISimulationSessionRepository sessionRepo,
             ISimulationContentRepository contentRepo,
+            ISimulationOptionRepository optionRepo,
             IDecisionRepository decisionRepo,
             ILogger<SimulationService> logger)
         {
             _sessionRepo = sessionRepo;
             _contentRepo = contentRepo;
+            _optionRepo = optionRepo;
             _decisionRepo = decisionRepo;
             _logger = logger;
         }
@@ -38,7 +40,7 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Services
                 var nuevaSesion = new SimulationSession
                 {
                     IdUsuario = idUsuario,
-                    FaseActual = 1,
+                    FaseActual = "inicio",
                     Estado = "EN_PROGRESO",
                     PuntajeTotal = 0,
                     InicialoAt = DateTime.Now
@@ -79,11 +81,16 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Services
                 if (sesion == null)
                     throw new InvalidOperationException($"Sesión {idSession} no encontrada");
 
-                if (fase > sesion.FaseActual)
-                    throw new InvalidOperationException($"No puedes acceder a la fase {fase} aún");
+                var contenido = await _contentRepo.ObtenerPorIdAsync(fase);
+                if (contenido == null)
+                    throw new InvalidOperationException($"Contenido para fase {fase} no encontrado");
 
-                var contenido = await _contentRepo.ObtenerPorFaseAsync(fase);
-                return contenido == null ? null : MapearAContenidoDto(contenido);
+                var opciones = await _optionRepo.ObtenerTodasPorContenidoAsync(contenido.IdContent);
+                
+                var contentDto = MapearAContenidoDto(contenido);
+                contentDto.Opciones = opciones;
+
+                return contentDto;
             }
             catch (Exception ex)
             {
@@ -111,28 +118,21 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Services
                 if (contenido == null)
                     throw new InvalidOperationException($"Contenido {request.IdContent} no encontrado");
 
-                var opciones = JsonSerializer.Deserialize<List<OpcionJson>>(contenido.Opciones) ?? new();
-                var opcionSeleccionada = opciones.FirstOrDefault(o => o.Id == request.OpcionElegida);
-
+                var opcionSeleccionada = await _optionRepo.ObtenerPorIdAsync(request.IdOption);
                 if (opcionSeleccionada == null)
-                    throw new InvalidOperationException($"Opción {request.OpcionElegida} no válida");
+                    throw new InvalidOperationException($"Opción {request.IdOption} no válida");
 
                 var decision = new Decision
                 {
                     IdSession = request.IdSession,
                     IdContent = request.IdContent,
-                    Fase = contenido.Fase,
-                    OpcionElegida = request.OpcionElegida,
+                    IdOption = request.IdOption,
                     PuntajeObtenido = opcionSeleccionada.Puntaje,
                     DecididoAt = DateTime.Now
                 };
 
                 var idDecision = await _decisionRepo.InsertarAsync(decision);
                 await _sessionRepo.ActualizarPuntajeAsync(request.IdSession, opcionSeleccionada.Puntaje);
-
-                var feedbacks = JsonSerializer.Deserialize<List<FeedbackJson>>(contenido.Feedback) ?? new();
-                var feedbackSeleccionado = feedbacks.FirstOrDefault(f => f.Id == request.OpcionElegida)
-                    ?? new FeedbackJson { Titulo = "Respuesta", Texto = "Procesada", Resultado = "completado" };
 
                 var sesionActualizada = await _sessionRepo.ObtenerPorIdAsync(request.IdSession);
 
@@ -142,11 +142,11 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Services
                 {
                     IdDecision = idDecision,
                     PuntajeObtenido = opcionSeleccionada.Puntaje,
-                    Titulo = feedbackSeleccionado.Titulo,
-                    Texto = feedbackSeleccionado.Texto,
-                    Resultado = feedbackSeleccionado.Resultado,
+                    Titulo = opcionSeleccionada.Feedback ?? "Respuesta",
+                    Texto = opcionSeleccionada.Resultado ?? "Procesada",
+                    Resultado = opcionSeleccionada.Nivel ?? "completado",
                     PuntajeTotalActualizado = sesionActualizada?.PuntajeTotal ?? 0,
-                    PuedeSiguiente = contenido.Fase < 10
+                    PuedeSiguiente = !string.IsNullOrEmpty(opcionSeleccionada.SiguientePreguntaId)
                 };
             }
             catch (Exception ex)
@@ -175,8 +175,7 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Services
                     DecisionesPrevias = decisiones.Select(d => new DecisionHistoryDto
                     {
                         IdDecision = d.IdDecision,
-                        Fase = d.Fase,
-                        OpcionElegida = d.OpcionElegida,
+                        IdOption = d.IdOption,
                         PuntajeObtenido = d.PuntajeObtenido,
                         DecididoAt = d.DecididoAt
                     }).ToList(),
@@ -209,28 +208,15 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Services
             return new SimulationContentDto
             {
                 IdContent = contenido.IdContent,
+                IdContentExterno = contenido.IdContentExterno,
                 Fase = contenido.Fase,
+                Categoria = contenido.Categoria,
                 Tipo = contenido.Tipo,
                 Titulo = contenido.Titulo,
-                Opciones = contenido.Opciones,
-                Feedback = contenido.Feedback,
+                Intro = contenido.Intro,
+                Pregunta = contenido.Pregunta,
                 Orden = contenido.Orden
             };
-        }
-
-        private class OpcionJson
-        {
-            public int Id { get; set; }
-            public string Texto { get; set; } = string.Empty;
-            public int Puntaje { get; set; }
-        }
-
-        private class FeedbackJson
-        {
-            public int Id { get; set; }
-            public string Titulo { get; set; } = string.Empty;
-            public string Texto { get; set; } = string.Empty;
-            public string Resultado { get; set; } = string.Empty;
         }
     }
 }

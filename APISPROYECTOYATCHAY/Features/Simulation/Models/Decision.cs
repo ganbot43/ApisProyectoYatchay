@@ -5,9 +5,8 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Models
         public int IdDecision { get; set; }
         public int IdSession { get; set; }
         public int IdContent { get; set; }
-        public int Fase { get; set; }
-        public int OpcionElegida { get; set; }
-        public int PuntajeObtenido { get; set; }
+        public int IdOption { get; set; }
+        public decimal PuntajeObtenido { get; set; }
         public DateTime DecididoAt { get; set; }
     }
 }

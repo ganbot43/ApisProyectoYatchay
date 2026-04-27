@@ -49,12 +49,12 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Controllers
             }
         }
 
-        [HttpGet("content/{idSession}/{fase}")]
-        public async Task<IActionResult> ObtenerContenido(int idSession, int fase)
+        [HttpGet("content/{idSession}/{idContent}")]
+        public async Task<IActionResult> ObtenerContenido(int idSession, int idContent)
         {
             try
             {
-                var contenido = await _simulationService.ObtenerContenidoAsync(idSession, fase);
+                var contenido = await _simulationService.ObtenerContenidoAsync(idSession, idContent);
                 if (contenido == null)
                     return NotFound(new { exito = 0, mensaje = "Contenido no encontrado" });
 

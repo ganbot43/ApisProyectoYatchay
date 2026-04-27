@@ -19,23 +19,87 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Repositories.Implementations
         {
             using var conn = new SqlConnection(_connectionString);
             return await conn.QueryFirstOrDefaultAsync<SimulationContent>(
-                "SELECT * FROM SimulationContent WHERE id_content = @IdContent",
+                @"SELECT 
+                    id_content AS IdContent,
+                    id_content_externo AS IdContentExterno,
+                    fase AS Fase,
+                    categoria AS Categoria,
+                    tipo AS Tipo,
+                    titulo AS Titulo,
+                    intro AS Intro,
+                    pregunta AS Pregunta,
+                    requerida AS Requerida,
+                    shuffle_opciones AS ShuffleOpciones,
+                    orden AS Orden,
+                    creado_at AS CreadoAt,
+                    actualizado_at AS ActualizadoAt
+                  FROM SimulationContent WHERE id_content = @IdContent",
                 new { IdContent = idContent });
         }
 
-        public async Task<SimulationContent?> ObtenerPorFaseAsync(int fase)
+        public async Task<SimulationContent?> ObtenerPorIdExternoAsync(string idContentExterno)
         {
             using var conn = new SqlConnection(_connectionString);
             return await conn.QueryFirstOrDefaultAsync<SimulationContent>(
-                "SELECT * FROM SimulationContent WHERE fase = @Fase ORDER BY orden",
+                @"SELECT 
+                    id_content AS IdContent,
+                    id_content_externo AS IdContentExterno,
+                    fase AS Fase,
+                    categoria AS Categoria,
+                    tipo AS Tipo,
+                    titulo AS Titulo,
+                    intro AS Intro,
+                    pregunta AS Pregunta,
+                    requerida AS Requerida,
+                    shuffle_opciones AS ShuffleOpciones,
+                    orden AS Orden,
+                    creado_at AS CreadoAt,
+                    actualizado_at AS ActualizadoAt
+                  FROM SimulationContent WHERE id_content_externo = @IdContentExterno",
+                new { IdContentExterno = idContentExterno });
+        }
+
+        public async Task<SimulationContent?> ObtenerPorFaseAsync(string fase)
+        {
+            using var conn = new SqlConnection(_connectionString);
+            return await conn.QueryFirstOrDefaultAsync<SimulationContent>(
+                @"SELECT 
+                    id_content AS IdContent,
+                    id_content_externo AS IdContentExterno,
+                    fase AS Fase,
+                    categoria AS Categoria,
+                    tipo AS Tipo,
+                    titulo AS Titulo,
+                    intro AS Intro,
+                    pregunta AS Pregunta,
+                    requerida AS Requerida,
+                    shuffle_opciones AS ShuffleOpciones,
+                    orden AS Orden,
+                    creado_at AS CreadoAt,
+                    actualizado_at AS ActualizadoAt
+                  FROM SimulationContent WHERE fase = @Fase ORDER BY orden",
                 new { Fase = fase });
         }
 
-        public async Task<List<SimulationContent>> ObtenerTodosPorFaseAsync(int fase)
+        public async Task<List<SimulationContent>> ObtenerTodosPorFaseAsync(string fase)
         {
             using var conn = new SqlConnection(_connectionString);
             var resultados = await conn.QueryAsync<SimulationContent>(
-                "SELECT * FROM SimulationContent WHERE fase = @Fase ORDER BY orden",
+                @"SELECT 
+                    id_content AS IdContent,
+                    id_content_externo AS IdContentExterno,
+                    fase AS Fase,
+                    categoria AS Categoria,
+                    tipo AS Tipo,
+                    titulo AS Titulo,
+                    intro AS Intro,
+                    pregunta AS Pregunta,
+                    requerida AS Requerida,
+                    shuffle_opciones AS ShuffleOpciones,
+                    orden AS Orden,
+                    creado_at AS CreadoAt,
+                    actualizado_at AS ActualizadoAt
+                  FROM SimulationContent WHERE fase = @Fase ORDER BY orden",
                 new { Fase = fase });
             return resultados.ToList();
         }
@@ -44,17 +108,120 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Repositories.Implementations
         {
             using var conn = new SqlConnection(_connectionString);
             return await conn.ExecuteScalarAsync<int>(
-                @"INSERT INTO SimulationContent (fase, tipo, titulo, opciones, feedback, orden)
-                  VALUES (@Fase, @Tipo, @Titulo, @Opciones, @Feedback, @Orden);
+                @"INSERT INTO SimulationContent (id_content_externo, fase, categoria, tipo, titulo, intro, pregunta, requerida, shuffle_opciones, orden)
+                  VALUES (@IdContentExterno, @Fase, @Categoria, @Tipo, @Titulo, @Intro, @Pregunta, @Requerida, @ShuffleOpciones, @Orden);
                   SELECT CAST(SCOPE_IDENTITY() as int);",
                 new
                 {
+                    content.IdContentExterno,
                     content.Fase,
+                    content.Categoria,
                     content.Tipo,
                     content.Titulo,
-                    content.Opciones,
-                    content.Feedback,
+                    content.Intro,
+                    content.Pregunta,
+                    content.Requerida,
+                    content.ShuffleOpciones,
                     content.Orden
+                });
+        }
+    }
+
+    public class SimulationOptionRepository : ISimulationOptionRepository
+    {
+        private readonly string _connectionString;
+
+        public SimulationOptionRepository(IConfiguration config)
+        {
+            _connectionString = config.GetConnectionString("Default")!;
+        }
+
+        public async Task<SimulationOption?> ObtenerPorIdAsync(int idOption)
+        {
+            using var conn = new SqlConnection(_connectionString);
+            return await conn.QueryFirstOrDefaultAsync<SimulationOption>(
+                @"SELECT 
+                    id_option AS IdOption,
+                    id_option_externo AS IdOptionExterno,
+                    id_content AS IdContent,
+                    texto AS Texto,
+                    puntaje AS Puntaje,
+                    nivel AS Nivel,
+                    feedback AS Feedback,
+                    resultado AS Resultado,
+                    insight AS Insight,
+                    siguiente_pregunta_id AS SiguientePreguntaId,
+                    orden AS Orden,
+                    creado_at AS CreadoAt,
+                    actualizado_at AS ActualizadoAt
+                  FROM SimulationOption WHERE id_option = @IdOption",
+                new { IdOption = idOption });
+        }
+
+        public async Task<List<SimulationOption>> ObtenerTodasPorContenidoAsync(int idContent)
+        {
+            using var conn = new SqlConnection(_connectionString);
+            var resultados = await conn.QueryAsync<SimulationOption>(
+                @"SELECT 
+                    id_option AS IdOption,
+                    id_option_externo AS IdOptionExterno,
+                    id_content AS IdContent,
+                    texto AS Texto,
+                    puntaje AS Puntaje,
+                    nivel AS Nivel,
+                    feedback AS Feedback,
+                    resultado AS Resultado,
+                    insight AS Insight,
+                    siguiente_pregunta_id AS SiguientePreguntaId,
+                    orden AS Orden,
+                    creado_at AS CreadoAt,
+                    actualizado_at AS ActualizadoAt
+                  FROM SimulationOption WHERE id_content = @IdContent ORDER BY orden",
+                new { IdContent = idContent });
+            return resultados.ToList();
+        }
+
+        public async Task<SimulationOption?> ObtenerPorIdExternoAsync(string idOptionExterno)
+        {
+            using var conn = new SqlConnection(_connectionString);
+            return await conn.QueryFirstOrDefaultAsync<SimulationOption>(
+                @"SELECT 
+                    id_option AS IdOption,
+                    id_option_externo AS IdOptionExterno,
+                    id_content AS IdContent,
+                    texto AS Texto,
+                    puntaje AS Puntaje,
+                    nivel AS Nivel,
+                    feedback AS Feedback,
+                    resultado AS Resultado,
+                    insight AS Insight,
+                    siguiente_pregunta_id AS SiguientePreguntaId,
+                    orden AS Orden,
+                    creado_at AS CreadoAt,
+                    actualizado_at AS ActualizadoAt
+                  FROM SimulationOption WHERE id_option_externo = @IdOptionExterno",
+                new { IdOptionExterno = idOptionExterno });
+        }
+
+        public async Task<int> InsertarAsync(SimulationOption option)
+        {
+            using var conn = new SqlConnection(_connectionString);
+            return await conn.ExecuteScalarAsync<int>(
+                @"INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, resultado, insight, siguiente_pregunta_id, orden)
+                  VALUES (@IdOptionExterno, @IdContent, @Texto, @Puntaje, @Nivel, @Feedback, @Resultado, @Insight, @SiguientePreguntaId, @Orden);
+                  SELECT CAST(SCOPE_IDENTITY() as int);",
+                new
+                {
+                    option.IdOptionExterno,
+                    option.IdContent,
+                    option.Texto,
+                    option.Puntaje,
+                    option.Nivel,
+                    option.Feedback,
+                    option.Resultado,
+                    option.Insight,
+                    option.SiguientePreguntaId,
+                    option.Orden
                 });
         }
     }
@@ -117,7 +284,7 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Repositories.Implementations
                 });
         }
 
-        public async Task<bool> ActualizarFaseAsync(int idSession, int faseNueva)
+        public async Task<bool> ActualizarFaseAsync(int idSession, string faseNueva)
         {
             using var conn = new SqlConnection(_connectionString);
             var resultado = await conn.ExecuteAsync(
@@ -126,7 +293,7 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Repositories.Implementations
             return resultado > 0;
         }
 
-        public async Task<bool> ActualizarPuntajeAsync(int idSession, int puntajeAñadido)
+        public async Task<bool> ActualizarPuntajeAsync(int idSession, decimal puntajeAñadido)
         {
             using var conn = new SqlConnection(_connectionString);
             var resultado = await conn.ExecuteAsync(
@@ -153,8 +320,7 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Repositories.Implementations
                     id_decision AS IdDecision,
                     id_session AS IdSession,
                     id_content AS IdContent,
-                    fase AS Fase,
-                    opcion_elegida AS OpcionElegida,
+                    id_option AS IdOption,
                     puntaje_obtenido AS PuntajeObtenido,
                     decidido_at AS DecididoAt
                   FROM Decision WHERE id_decision = @IdDecision",
@@ -169,8 +335,7 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Repositories.Implementations
                     id_decision AS IdDecision,
                     id_session AS IdSession,
                     id_content AS IdContent,
-                    fase AS Fase,
-                    opcion_elegida AS OpcionElegida,
+                    id_option AS IdOption,
                     puntaje_obtenido AS PuntajeObtenido,
                     decidido_at AS DecididoAt
                   FROM Decision WHERE id_session = @IdSession
@@ -183,15 +348,14 @@ namespace APISPROYECTOYATCHAY.Features.Simulation.Repositories.Implementations
         {
             using var conn = new SqlConnection(_connectionString);
             return await conn.ExecuteScalarAsync<int>(
-                @"INSERT INTO Decision (id_session, id_content, fase, opcion_elegida, puntaje_obtenido)
-                  VALUES (@IdSession, @IdContent, @Fase, @OpcionElegida, @PuntajeObtenido);
+                @"INSERT INTO Decision (id_session, id_content, id_option, puntaje_obtenido)
+                  VALUES (@IdSession, @IdContent, @IdOption, @PuntajeObtenido);
                   SELECT CAST(SCOPE_IDENTITY() as int);",
                 new
                 {
                     decision.IdSession,
                     decision.IdContent,
-                    decision.Fase,
-                    decision.OpcionElegida,
+                    decision.IdOption,
                     decision.PuntajeObtenido
                 });
         }

@@ -4,138 +4,73 @@ GO
 USE SistemaQuizYatchay;
 GO
 
-
+-- TABLAS DE AUTENTICACIÓN
 CREATE TABLE Rol (
-    id_rol  INT IDENTITY(1,1) PRIMARY KEY,
-    nombre  VARCHAR(20) NOT NULL UNIQUE
+    id_rol INT IDENTITY(1,1) PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE
 );
 GO
 
-INSERT INTO Rol (nombre) VALUES ('estudiante'), ('analista');
+INSERT INTO Rol (nombre) VALUES ('ESTUDIANTE'), ('DOCENTE'), ('ADMINISTRADOR');
 GO
 
 CREATE TABLE Usuario (
-    id_usuario          INT IDENTITY(1,1) PRIMARY KEY,
-    nombre              VARCHAR(100)    NOT NULL,
-    apellido            VARCHAR(100)    NOT NULL,
-    correo              VARCHAR(150)    NOT NULL UNIQUE,
-    contrasena_hash     VARCHAR(255)    NOT NULL,
-    contrasena_literal  VARCHAR(255)    NULL,
-    dni                 VARCHAR(20)     NOT NULL UNIQUE,
-    id_rol              INT             NOT NULL,
-    fecha_registro      DATETIME        NOT NULL DEFAULT GETDATE(),
-    fecha_actualizacion DATETIME        NULL,
+    id_usuario INT IDENTITY(1,1) PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100) NOT NULL,
+    correo VARCHAR(150) NOT NULL UNIQUE,
+    contrasena_hash VARCHAR(255) NOT NULL,
+    contrasena_literal VARCHAR(255) NULL,
+    dni VARCHAR(20) NOT NULL UNIQUE,
+    id_rol INT NOT NULL,
+    fecha_registro DATETIME NOT NULL DEFAULT GETDATE(),
+    fecha_actualizacion DATETIME NULL,
     CONSTRAINT FK_Usuario_Rol FOREIGN KEY (id_rol) REFERENCES Rol(id_rol)
 );
 GO
 
-CREATE PROCEDURE sp_Usuario_Insertar
-    @Nombre NVARCHAR(100),
-    @Apellido NVARCHAR(100),
-    @Correo NVARCHAR(150),
-    @ContrasenaHash NVARCHAR(255),
-    @ContrasenalLiteral NVARCHAR(255),
-    @DNI NVARCHAR(20),
-    @IdRol INT
-AS
-BEGIN
-    IF @Correo NOT LIKE 'i[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]@cibertec.edu.pe'
-    BEGIN
-        SELECT 0 AS Exito, 'El correo debe tener formato: i#########@cibertec.edu.pe' AS Mensaje;
-        RETURN;
-    END
-    
-    -- Validar formato del DNI (8 dígitos)
-    IF @DNI NOT LIKE '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
-    BEGIN
-        SELECT 0 AS Exito, 'El DNI debe tener exactamente 8 dígitos' AS Mensaje;
-        RETURN;
-    END
-    
-    IF NOT EXISTS (SELECT 1 FROM Rol WHERE id_rol = @IdRol)
-    BEGIN
-        SELECT 0 AS Exito, 'Rol inválido' AS Mensaje;
-        RETURN;
-    END
-    
-    IF EXISTS (SELECT 1 FROM Usuario WHERE correo = @Correo)
-    BEGIN
-        SELECT 0 AS Exito, 'Correo ya registrado' AS Mensaje;
-        RETURN;
-    END
-    
-    IF EXISTS (SELECT 1 FROM Usuario WHERE dni = @DNI)
-    BEGIN
-        SELECT 0 AS Exito, 'DNI ya registrado' AS Mensaje;
-        RETURN;
-    END
-    
-    INSERT INTO Usuario (nombre, apellido, correo, contrasena_hash, contrasena_literal, dni, id_rol)
-    VALUES (@Nombre, @Apellido, @Correo, @ContrasenaHash, @ContrasenalLiteral, @DNI, @IdRol);
-    
-    SELECT 1 AS Exito, 'Usuario registrado' AS Mensaje;
-END
-GO
-
-CREATE PROCEDURE sp_Usuario_Login
-    @Correo NVARCHAR(150),
-    @ContrasenaHash NVARCHAR(255)
-AS
-BEGIN
-    SELECT 
-        u.id_usuario AS IdUsuario,      
-        u.nombre AS Nombre,       
-        u.id_rol AS IdRol,              
-        r.nombre AS NombreRol       
-    FROM Usuario u
-    INNER JOIN Rol r ON u.id_rol = r.id_rol
-    WHERE u.correo = @Correo AND u.contrasena_hash = @ContrasenaHash;
-END
-GO
-
-
-SELECT * FROM Rol
-
-SELECT id_usuario, nombre, apellido, correo, dni, id_rol, fecha_registro
-FROM Usuario;
-GO
-
-SELECT 
-    u.id_usuario,
-    u.nombre,
-    u.apellido,
-    u.correo,
-    u.contrasena_hash,
-    u.contrasena_literal,
-    u.dni,
-    u.id_rol,
-    r.nombre AS rol,
-    u.fecha_registro
-FROM Usuario u
-INNER JOIN Rol r ON u.id_rol = r.id_rol
-ORDER BY u.id_usuario;
-GO
-
--- TABLAS DEL SIMULADOR
+-- TABLAS DEL SIMULADOR YACHAY-TECH
 CREATE TABLE SimulationContent (
     id_content INT IDENTITY(1,1) PRIMARY KEY,
-    fase INT NOT NULL,
+    id_content_externo VARCHAR(100) NOT NULL UNIQUE,
+    fase VARCHAR(50) NOT NULL,
+    categoria VARCHAR(100) NULL,
     tipo VARCHAR(50) NOT NULL,
     titulo NVARCHAR(255) NOT NULL,
-    opciones NVARCHAR(MAX) NOT NULL, -- JSON con las opciones
-    feedback NVARCHAR(MAX) NOT NULL, -- JSON con feedback
+    intro NVARCHAR(MAX) NULL,
+    pregunta NVARCHAR(MAX) NOT NULL,
+    requerida BIT NOT NULL DEFAULT 1,
+    shuffle_opciones BIT NOT NULL DEFAULT 1,
     orden INT NOT NULL,
     creado_at DATETIME NOT NULL DEFAULT GETDATE(),
     actualizado_at DATETIME NULL
 );
 GO
 
+CREATE TABLE SimulationOption (
+    id_option INT IDENTITY(1,1) PRIMARY KEY,
+    id_option_externo VARCHAR(120) NOT NULL UNIQUE,
+    id_content INT NOT NULL,
+    texto NVARCHAR(MAX) NOT NULL,
+    puntaje DECIMAL(5,2) NOT NULL DEFAULT 0,
+    nivel VARCHAR(20) NULL,
+    feedback NVARCHAR(MAX) NULL,
+    resultado NVARCHAR(MAX) NULL,
+    insight NVARCHAR(MAX) NULL,
+    siguiente_pregunta_id VARCHAR(100) NULL,
+    orden INT NOT NULL DEFAULT 0,
+    creado_at DATETIME NOT NULL DEFAULT GETDATE(),
+    actualizado_at DATETIME NULL,
+    CONSTRAINT FK_Option_Content FOREIGN KEY (id_content) REFERENCES SimulationContent(id_content)
+);
+GO
+
 CREATE TABLE SimulationSession (
     id_session INT IDENTITY(1,1) PRIMARY KEY,
     id_usuario INT NOT NULL,
-    fase_actual INT NOT NULL DEFAULT 1,
-    estado VARCHAR(20) NOT NULL DEFAULT 'EN_PROGRESO', -- EN_PROGRESO, COMPLETADO
-    puntaje_total INT NOT NULL DEFAULT 0,
+    fase_actual VARCHAR(50) NOT NULL DEFAULT 'inicio',
+    estado VARCHAR(20) NOT NULL DEFAULT 'EN_PROGRESO',
+    puntaje_total DECIMAL(5,2) NOT NULL DEFAULT 0,
     iniciado_at DATETIME NOT NULL DEFAULT GETDATE(),
     finalizado_at DATETIME NULL,
     CONSTRAINT FK_SimulationSession_Usuario FOREIGN KEY (id_usuario) REFERENCES Usuario(id_usuario)
@@ -146,51 +81,285 @@ CREATE TABLE Decision (
     id_decision INT IDENTITY(1,1) PRIMARY KEY,
     id_session INT NOT NULL,
     id_content INT NOT NULL,
-    fase INT NOT NULL,
-    opcion_elegida INT NOT NULL,
-    puntaje_obtenido INT NOT NULL,
+    id_option INT NOT NULL,
+    puntaje_obtenido DECIMAL(5,2) NOT NULL,
     decidido_at DATETIME NOT NULL DEFAULT GETDATE(),
-    CONSTRAINT FK_Decision_SimulationSession FOREIGN KEY (id_session) REFERENCES SimulationSession(id_session),
-    CONSTRAINT FK_Decision_SimulationContent FOREIGN KEY (id_content) REFERENCES SimulationContent(id_content),
-    -- UNIQUE para inmutabilidad: una decisión por contenido por sesión
+    CONSTRAINT FK_Decision_Session FOREIGN KEY (id_session) REFERENCES SimulationSession(id_session),
+    CONSTRAINT FK_Decision_Content FOREIGN KEY (id_content) REFERENCES SimulationContent(id_content),
+    CONSTRAINT FK_Decision_Option FOREIGN KEY (id_option) REFERENCES SimulationOption(id_option),
     UNIQUE(id_session, id_content)
 );
 GO
 
--- ÍNDICES para optimizar búsquedas
+-- ÍNDICES
 CREATE INDEX IX_SimulationSession_Usuario ON SimulationSession(id_usuario);
 CREATE INDEX IX_Decision_Session ON Decision(id_session);
-CREATE INDEX IX_Decision_Session_Content ON Decision(id_session, id_content);
 CREATE INDEX IX_SimulationContent_Fase ON SimulationContent(fase);
 GO
 
--- DATOS DE PRUEBA
-INSERT INTO SimulationContent (fase, tipo, titulo, opciones, feedback, orden) VALUES
-(1, 'pregunta', 'Fase 1: Decisión Inicial', 
-'[{"id": 1, "texto": "Opción A", "puntaje": 10}, {"id": 2, "texto": "Opción B", "puntaje": 5}, {"id": 3, "texto": "Opción C", "puntaje": 0}]',
-'[{"id": 1, "titulo": "Correcto", "texto": "Excelente decisión", "resultado": "éxito"}, {"id": 2, "titulo": "Regular", "texto": "Podrías mejorar", "resultado": "parcial"}, {"id": 3, "titulo": "Incorrecto", "texto": "Necesitas repensar", "resultado": "error"}]',
-1),
-(2, 'pregunta', 'Fase 2: Decisión Estratégica', 
-'[{"id": 1, "texto": "Estrategia 1", "puntaje": 15}, {"id": 2, "texto": "Estrategia 2", "puntaje": 8}]',
-'[{"id": 1, "titulo": "Estrategia óptima", "texto": "Esta es la mejor ruta", "resultado": "éxito"}, {"id": 2, "titulo": "Alternativa", "texto": "También funciona", "resultado": "parcial"}]',
-1);
+-- DATOS: PREGUNTA INICIAL
+INSERT INTO SimulationContent (id_content_externo, fase, tipo, titulo, pregunta, requerida, shuffle_opciones, orden)
+VALUES ('inicio_ruta_analisis', 'inicio', 'navigation', 'Inicio de la simulación', 
+'Yachay-Tech ha detectado que, aunque hay mucho tráfico en su web, las ventas de su tablet Kallpa se detienen en el carrito de compras. ¿Qué ruta de análisis deseas iniciar?', 1, 1, 1);
 GO
 
--- DATOS DE PRUEBA ADICIONALES
-INSERT INTO SimulationContent (fase, tipo, titulo, opciones, feedback, orden) VALUES
-(1, 'RIESGO', '¿Qué haces ante un problema?', 
-'[{"id": 1, "texto": "Ignorar", "puntaje": 0}, {"id": 2, "texto": "Analizar", "puntaje": 10}, {"id": 3, "texto": "Escalar", "puntaje": 5}]',
-'[{"id": 1, "titulo": "Mala decisión", "texto": "Ignorar problemas no los resuelve", "resultado": "error"}, {"id": 2, "titulo": "Buena decisión", "texto": "Analizar es el primer paso correcto", "resultado": "éxito"}, {"id": 3, "titulo": "Regular", "texto": "Escalar es una opción pero debe analizarse primero", "resultado": "parcial"}]',
-2),
-(2, 'SEGURIDAD', 'Detectas una vulnerabilidad, ¿qué haces?', 
-'[{"id": 1, "texto": "Reportar", "puntaje": 10}, {"id": 2, "texto": "Ignorar", "puntaje": 0}, {"id": 3, "texto": "Corregir", "puntaje": 8}]',
-'[{"id": 1, "titulo": "Correcto", "texto": "Reportar vulnerabilidades es lo correcto", "resultado": "éxito"}, {"id": 2, "titulo": "Incorrecto", "texto": "Ignorar vulnerabilidades pone en riesgo el sistema", "resultado": "error"}, {"id": 3, "titulo": "Bien", "texto": "Corregir sin reportar puede dejar brechas", "resultado": "parcial"}]',
-1),
-(3, 'GESTION', 'El equipo falla, ¿cómo actúas?', 
-'[{"id": 1, "texto": "Culpar", "puntaje": 0}, {"id": 2, "texto": "Apoyar", "puntaje": 10}, {"id": 3, "texto": "Reorganizar", "puntaje": 6}]',
-'[{"id": 1, "titulo": "Negativo", "texto": "Culpar daña el equipo y no resuelve nada", "resultado": "error"}, {"id": 2, "titulo": "Positivo", "texto": "Apoyar al equipo es liderazgo efectivo", "resultado": "éxito"}, {"id": 3, "titulo": "Aceptable", "texto": "Reorganizar puede ayudar pero requiere apoyo", "resultado": "parcial"}]',
-1);
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, siguiente_pregunta_id, orden)
+SELECT 'analisis_estimulos', id_content, 'Análisis de Estímulos', 'fase1_estimulos', 1
+FROM SimulationContent WHERE id_content_externo = 'inicio_ruta_analisis';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, siguiente_pregunta_id, orden)
+SELECT 'analisis_toma_decisiones', id_content, 'Análisis de la Toma de Decisiones', 'fase1_toma_decisiones', 2
+FROM SimulationContent WHERE id_content_externo = 'inicio_ruta_analisis';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, siguiente_pregunta_id, orden)
+SELECT 'analisis_actitudes_creencias', id_content, 'Análisis de Actitudes y Creencias', 'fase1_actitudes_creencias', 3
+FROM SimulationContent WHERE id_content_externo = 'inicio_ruta_analisis';
 GO
 
-SELECT 1 AS Exito, 'Datos de prueba insertados' AS Mensaje;
+-- FASE 1: Análisis de Estímulos
+INSERT INTO SimulationContent (id_content_externo, fase, categoria, tipo, titulo, intro, pregunta, requerida, shuffle_opciones, orden)
+VALUES ('fase1_estimulos', 'fase_1', 'analisis_estimulos', 'single_choice', 'Análisis de Estímulos',
+'Has decidido iniciar con un enfoque sensorial y de motivación, donde el foco de la investigación se desplaza hacia cómo los estímulos físicos y las necesidades psicológicas de seguridad y autorrealización afectan el comportamiento.',
+'¿Qué instrumento aplicarías para identificar los stoppers desde los estímulos físicos, sensoriales y motivacionales?', 1, 1, 1);
 GO
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, resultado, insight, orden)
+SELECT 'auditoria_contenido_multimedia_ux', id_content, 'Auditoría de Contenido Multimedia y UX', 0.5, 'basic',
+'¡Excelente elección! Estás aplicando el concepto de sensaciones al entorno digital. Revisar cómo el cliente percibe visualmente la tablet es fundamental para un negocio que opera con un cliente digitalizado.',
+'Existe falla sensorial: las fotos en la web son estáticas y no muestran la fluidez del procesador en multitarea. El contenido educativo de Yachay-Hub está escondido en una pestaña secundaria, dificultando que el estudiante perciba de inmediato cómo la tablet le ayudará a mejorar sus notas.',
+'El entorno digital no está estimulando los sentidos del cliente.', 1
+FROM SimulationContent WHERE id_content_externo = 'fase1_estimulos';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, resultado, insight, orden)
+SELECT 'test_producto_pop_up_stores', id_content, 'Test de Producto en Puntos de Venta / Pop-up Stores', 1, 'medium',
+'¡Muy bien pensado! Al permitir el contacto físico, estás activando el canal sensorial completo del cliente. Esto ayuda a romper la creencia de que la tecnología local es de baja calidad, aunque los datos pueden estar sesgados por quien aplique el test.',
+'El 85% de los padres se sorprendió positivamente al tocar el aluminio reforzado, ya que esperaban plástico barato. Algunos usuarios reportaron que el brillo de pantalla en exteriores es insuficiente. Se observó que los padres se acercan al módulo si ven a otros padres probando el equipo primero.',
+'El contacto físico rompe la creencia negativa de mala calidad.', 2
+FROM SimulationContent WHERE id_content_externo = 'fase1_estimulos';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, resultado, insight, orden)
+SELECT 'prueba_rendimiento_yachay_hub', id_content, 'Prueba de Rendimiento Crítico de Yachay-Hub', 2, 'best',
+'¡Decisión estratégica superior! Has seleccionado una herramienta que analiza profundamente la motivación del cliente. Al demostrar el valor de Yachay-Hub sin conexión y la durabilidad de la batería en condiciones reales, atacas directamente la necesidad psicológica de seguridad del padre de familia.',
+'Al ver la tablet caer desde 1 metro sin sufrir daños, el estrés de los padres bajó drásticamente y la intención de compra subió 60%. El uso de Yachay-Hub sin internet generó alivio y empoderamiento en estudiantes de zonas rurales. Se descubrió que el miedo al robo pesa más que el miedo a que el equipo se malogre.',
+'La motivación de seguridad no es solo técnica, también es contextual. Para vender, se debe ofrecer tranquilidad total.', 3
+FROM SimulationContent WHERE id_content_externo = 'fase1_estimulos';
+GO
+
+-- FASE 1: Análisis de Toma de Decisiones
+INSERT INTO SimulationContent (id_content_externo, fase, categoria, tipo, titulo, intro, pregunta, requerida, shuffle_opciones, orden)
+VALUES ('fase1_toma_decisiones', 'fase_1', 'analisis_toma_decisiones', 'single_choice', 'Análisis de la Toma de Decisiones',
+'En el contexto peruano, la compra de tecnología no es una decisión aislada. Está mediada por la familia, el grupo de pares y los líderes de opinión.',
+'¿Qué instrumento aplicarías para entender cómo se toma la decisión de compra?', 1, 1, 2);
+GO
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, resultado, insight, orden)
+SELECT 'encuesta_referidos_canales', id_content, 'Encuesta de Referidos y Canales de Información', 0.5, 'basic',
+'¡Buen trabajo! Has elegido una herramienta eficiente para mapear influencias externas cuantitativamente. Identificar si el cliente llega por red social o recomendación es el primer paso para entender el entorno del consumidor.',
+'El 65% de clientes llegó por un video de TikTok, pero el 80% solo compró tras consultar a un amigo que sabe de tecnología. El 40% de padres mencionó que el precio le hacía dudar hasta que alguien de confianza le dio el visto bueno.',
+'Falta una figura de autoridad técnica local que valide la marca masivamente.', 1
+FROM SimulationContent WHERE id_content_externo = 'fase1_toma_decisiones';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, resultado, insight, orden)
+SELECT 'etnografia_digital_comunidades', id_content, 'Etnografía Digital en Comunidades Universitarias', 1, 'medium',
+'¡Excelente enfoque! Al observar el comportamiento en su entorno natural, analizas los factores sociales y grupos de referencia de la Generación Z. Este instrumento permite ver la influencia de pares en tiempo real.',
+'En grupos de WhatsApp, Yachay-Tech es vista como la tablet para estudiar, pero se recomienda una marca global para lucirse en la facultad. Existe un líder de opinión que puede validar o destruir la reputación con un comentario.',
+'El factor social de estatus asocia lo peruano con algo funcional, pero no aspiracional.', 2
+FROM SimulationContent WHERE id_content_externo = 'fase1_toma_decisiones';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, resultado, insight, orden)
+SELECT 'shadowing_punto_decision', id_content, 'Shadowing y Entrevista en el Punto de Decisión / Tienda Física', 2, 'best',
+'¡Decisión estratégica sobresaliente! Has seleccionado el instrumento más profundo para este camino. Permite observar la dinámica real entre decisor e influyente, padre e hijo, e identificar en qué etapa surge el conflicto.',
+'El hijo convence al padre usando argumentos de tareas y software, pero al momento de pagar el padre mira marcas globales y pregunta al vendedor cuál recomienda. Si el vendedor duda o no conoce Yachay-Tech, el padre abandona la compra.',
+'El vendedor es un influyente crítico. La inseguridad del padre aparece en la etapa final del proceso de decisión.', 3
+FROM SimulationContent WHERE id_content_externo = 'fase1_toma_decisiones';
+GO
+
+-- FASE 1: Análisis de Actitudes y Creencias
+INSERT INTO SimulationContent (id_content_externo, fase, categoria, tipo, titulo, intro, pregunta, requerida, shuffle_opciones, orden)
+VALUES ('fase1_actitudes_creencias', 'fase_1', 'analisis_actitudes_creencias', 'single_choice', 'Análisis de Actitudes y Creencias',
+'Has decidido iniciar con el análisis de actitudes y creencias, que son barreras críticas en el mercado tecnológico peruano para marcas emergentes como Yachay-Tech.',
+'¿Qué instrumento aplicarías para entender las creencias negativas hacia la marca local?', 1, 1, 3);
+GO
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, resultado, insight, orden)
+SELECT 'encuesta_digital_post_abandono', id_content, 'Encuesta Digital Estándar Post-Abandono', 0.5, 'basic',
+'¡Buena idea! Permite obtener datos cuantitativos rápidamente y a bajo costo. Es valiosa para identificar tendencias generales, aunque no profundiza en creencias subyacentes.',
+'El 55% marcó desconfianza en durabilidad del hardware. El 80% considera que el precio es muy bueno, pero el 40% teme que lo barato signifique mala calidad. El 70% no sabía que la tablet incluye contenido del MINEDU sin internet.',
+'Sabes qué pasa, pero no sabes profundamente el porqué.', 1
+FROM SimulationContent WHERE id_content_externo = 'fase1_actitudes_creencias';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, resultado, insight, orden)
+SELECT 'entrevistas_comprador_dual', id_content, 'Entrevistas a Profundidad con el Comprador Dual', 1, 'medium',
+'¡Excelente enfoque! Al incluir a hijo y padre, reconoces las influencias de la toma de decisiones. Captas matices emocionales y motivaciones de seguridad que una encuesta ignoraría.',
+'El hijo tiene actitud positiva hacia Yachay-Hub, pero siente que la tablet no tiene onda o estatus. El padre es el principal stopper por experiencias negativas con marcas ensambladas en Perú. Solo compraría con garantía física cercana.',
+'La evaluación de alternativas se bloquea porque el padre prioriza seguridad y el hijo busca autorrealización.', 2
+FROM SimulationContent WHERE id_content_externo = 'fase1_actitudes_creencias';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, resultado, insight, orden)
+SELECT 'focus_group_asociacion_implicita', id_content, 'Focus Group de Asociación Implícita y Proyectiva', 2, 'best',
+'¡Impresionante decisión estratégica! Es la herramienta cualitativa más potente para entender creencias arraigadas y el componente cognitivo de la actitud negativa hacia la marca.',
+'Los participantes describen a Yachay-Tech como un estudiante esforzado con ropa genérica, y a la competencia global como el estudiante exitoso. En prueba ciega, el 90% prefirió la fluidez de Kallpa, pero al mostrar el logo de Yachay-Tech bajó la percepción de calidad.',
+'El cliente peruano tiene un prejuicio cognitivo: asocia tecnología nacional con lo básico, aunque las especificaciones sean de alta gama.', 3
+FROM SimulationContent WHERE id_content_externo = 'fase1_actitudes_creencias';
+GO
+
+-- FASE 2: Buyer Persona Hijo
+INSERT INTO SimulationContent (id_content_externo, fase, categoria, tipo, titulo, intro, pregunta, requerida, shuffle_opciones, orden)
+VALUES ('fase2_buyer_hijo', 'fase_2', 'buyer_persona_hijo', 'single_choice', 'Buyer Persona Hijo',
+'Son jóvenes estudiantes entre 17 y 25 años en regiones como Cusco, Huancayo y Arequipa. Son impulsores de compra, mas no decisores.',
+'¿Cuál perfil representa mejor al Buyer Persona Hijo?', 1, 1, 1);
+GO
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'hijo_perfil_completo', id_content,
+'Joven universitario de 19 años, motivado por el rendimiento académico y la utilidad del software Yachay-Hub. Reconoce que la tablet le permite estudiar sin internet y valora la batería de larga duración. Busca autorrealización a través del estudio, pero siente presión social por el estatus de las marcas globales.',
+2.5, 'best', 'Este es un Buyer Persona claro, con motivaciones, barreras y contexto social bien definidos.', 1
+FROM SimulationContent WHERE id_content_externo = 'fase2_buyer_hijo';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'hijo_perfil_funcional', id_content,
+'Estudiante de 20 años, interesado en la funcionalidad de la tablet para tareas y proyectos. Reconoce la ventaja del precio accesible, pero duda de la durabilidad. La decisión depende de la validación de pares y de la confianza que le transmita el padre.',
+2, 'good', 'Este es un Buyer Persona útil, aunque con matices emocionales y sociales limitados.', 2
+FROM SimulationContent WHERE id_content_externo = 'fase2_buyer_hijo';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'hijo_perfil_precio', id_content,
+'Joven de 18 años que ve la tablet como una opción barata para estudiar. Percibe el software educativo como un plus, pero no lo considera decisivo. Su motivación principal es el precio, aunque no logra articular cómo influyen los pares o el padre.',
+1, 'regular', 'Este es un Buyer Persona incompleto, con foco en un solo factor: precio.', 3
+FROM SimulationContent WHERE id_content_externo = 'fase2_buyer_hijo';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'hijo_perfil_basico', id_content,
+'Joven de 18 años, quiere una tablet para estudiar y que tenga buena cámara para conectarse a clases. Se siente motivado por comprar, pero no sabe cómo ni para qué le será útil.',
+0.5, 'basic', 'Este es un Buyer Persona poco útil. Su aporte es limitado para orientar estrategias de posicionamiento.', 4
+FROM SimulationContent WHERE id_content_externo = 'fase2_buyer_hijo';
+GO
+
+-- FASE 2: Buyer Persona Padre
+INSERT INTO SimulationContent (id_content_externo, fase, categoria, tipo, titulo, intro, pregunta, requerida, shuffle_opciones, orden)
+VALUES ('fase2_buyer_padre', 'fase_2', 'buyer_persona_padre', 'single_choice', 'Buyer Persona Padre',
+'Son adultos de la Generación X y toman la decisión final de compra.',
+'¿Cuál perfil representa mejor al Buyer Persona Padre?', 1, 1, 2);
+GO
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'padre_perfil_completo', id_content,
+'Hombre de 45 a 55 años, trabajador de clase media en provincia, responsable de financiar la compra. Tiene experiencias negativas previas con tecnología ensamblada en Perú y teme que lo barato signifique poca durabilidad. Su motivación central es la seguridad: quiere garantía física cercana y confianza en el vendedor. Valora el precio, pero solo si se acompaña de respaldo técnico.',
+2.5, 'best', 'Este es un Buyer Persona completo, con motivaciones, barreras y contexto social/familiar bien definidos.', 1
+FROM SimulationContent WHERE id_content_externo = 'fase2_buyer_padre';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'padre_perfil_validacion', id_content,
+'Padre de 50 años, preocupado por la inversión en tecnología para su hijo. Reconoce que la tablet es económica y funcional, pero duda de la marca local. Necesita validación externa, como vendedor o amigo experto, para sentirse seguro en la compra.',
+2, 'good', 'Este es un Buyer Persona útil, aunque con menor profundidad en las creencias culturales.', 2
+FROM SimulationContent WHERE id_content_externo = 'fase2_buyer_padre';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'padre_perfil_durabilidad', id_content,
+'Padre de 40 años, que percibe la tablet como barata y suficiente para estudiar. No se exploran sus experiencias previas ni su contexto social. Su stopper principal es la desconfianza en la durabilidad, pero no se explica el porqué ni cómo superarlo.',
+1, 'regular', 'Este es un Buyer Persona incompleto, con foco en precio/durabilidad y sin claridad sobre el proceso de decisión.', 3
+FROM SimulationContent WHERE id_content_externo = 'fase2_buyer_padre';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'padre_perfil_redes', id_content,
+'Padre de 40 a 50 años, influenciado por las tendencias que observa en redes sociales. Prefiere que su hijo decida y se encargará de darle el dinero que necesite. Su principal motivación es que el hijo sea feliz con el dispositivo.',
+0.5, 'basic', 'Este es un Buyer Persona poco útil. Su aporte es limitado para orientar estrategias de posicionamiento.', 4
+FROM SimulationContent WHERE id_content_externo = 'fase2_buyer_padre';
+GO
+
+-- FASE 3: Eje Precio vs. Calidad
+INSERT INTO SimulationContent (id_content_externo, fase, categoria, tipo, titulo, pregunta, requerida, shuffle_opciones, orden)
+VALUES ('fase3_precio_calidad', 'fase_3', 'precio_vs_calidad', 'single_choice', 'Eje Precio vs. Calidad',
+'¿Qué posicionamiento elegirías para el eje Precio vs. Calidad?', 1, 1, 1);
+GO
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'calidad_accesible_respaldo_local', id_content,
+'Calidad accesible con respaldo local',
+3, 'best', '¡Excelente! Este enfoque rompe el prejuicio de lo barato es malo y convierte el precio accesible en un atributo aspiracional.', 1
+FROM SimulationContent WHERE id_content_externo = 'fase3_precio_calidad';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'opcion_inteligente_estudiar', id_content,
+'La opción inteligente para estudiar',
+2, 'good', '¡Interesante! Genera confianza moderada y atrae a estudiantes que buscan funcionalidad, aunque aún depende de validación externa.', 2
+FROM SimulationContent WHERE id_content_externo = 'fase3_precio_calidad';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'tablet_economica_estudiantes', id_content,
+'La tablet económica para estudiantes',
+1, 'regular', 'Atrae compradores sensibles al precio, pero refuerza el prejuicio de baja calidad y limita la percepción de valor.', 3
+FROM SimulationContent WHERE id_content_externo = 'fase3_precio_calidad';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'alternativa_local', id_content,
+'La alternativa local',
+0.5, 'basic', 'No logra diferenciarse ni superar creencias negativas. Probablemente mantenga ventas estancadas y percepción débil sobre la calidad.', 4
+FROM SimulationContent WHERE id_content_externo = 'fase3_precio_calidad';
+GO
+
+-- FASE 3: Eje Innovación vs. Diseño
+INSERT INTO SimulationContent (id_content_externo, fase, categoria, tipo, titulo, pregunta, requerida, shuffle_opciones, orden)
+VALUES ('fase3_innovacion_diseno', 'fase_3', 'innovacion_vs_diseno', 'single_choice', 'Eje Innovación vs. Diseño',
+'¿Qué posicionamiento elegirías para el eje Innovación vs. Diseño?', 1, 1, 2);
+GO
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'innovacion_peruana_diseno_global', id_content,
+'Innovación peruana con diseño global',
+3, 'best', '¡Excelente! Este enfoque rompe el prejuicio de producto local básico y convierte la innovación en un símbolo de estatus accesible.', 1
+FROM SimulationContent WHERE id_content_externo = 'fase3_innovacion_diseno';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'diseno_funcional_estudiantes_exigentes', id_content,
+'Diseño funcional para estudiantes exigentes',
+2, 'good', '¡Interesante! Busca generar confianza y diferenciación moderada, aunque no alcanza un nivel aspiracional pleno.', 2
+FROM SimulationContent WHERE id_content_externo = 'fase3_innovacion_diseno';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'tablet_practica_economica', id_content,
+'La tablet práctica y económica',
+1, 'regular', 'Atrae compradores pragmáticos, pero refuerza la percepción de producto limitado y poco innovador.', 3
+FROM SimulationContent WHERE id_content_externo = 'fase3_innovacion_diseno';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'alternativa_local_sin_pretensiones', id_content,
+'La alternativa local sin pretensiones',
+0.5, 'basic', 'No logra diferenciar ni superar prejuicios. Es probable que las ventas se estanquen y haya percepción débil de innovación.', 4
+FROM SimulationContent WHERE id_content_externo = 'fase3_innovacion_diseno';
+GO
+
+-- FASE 3: Eje Prestigio vs. Experiencia
+INSERT INTO SimulationContent (id_content_externo, fase, categoria, tipo, titulo, pregunta, requerida, shuffle_opciones, orden)
+VALUES ('fase3_prestigio_experiencia', 'fase_3', 'prestigio_vs_experiencia', 'single_choice', 'Eje Prestigio vs. Experiencia',
+'¿Qué posicionamiento elegirías para el eje Prestigio vs. Experiencia?', 1, 1, 3);
+GO
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'prestigio_academico_experiencia_premium', id_content,
+'Prestigio académico con experiencia premium',
+3, 'best', '¡Excelente! Con este enfoque la marca se percibe como prestigiosa y confiable, elevando la experiencia de compra a un nivel aspiracional.', 1
+FROM SimulationContent WHERE id_content_externo = 'fase3_prestigio_experiencia';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'experiencia_confiable_familias_peruanas', id_content,
+'Experiencia confiable para familias peruanas',
+2, 'good', '¡Interesante! Este enfoque genera buena percepción de experiencia y prestigio moderado, aunque limitado al contexto local.', 2
+FROM SimulationContent WHERE id_content_externo = 'fase3_prestigio_experiencia';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'tablet_practica_estudiar', id_content,
+'La tablet práctica para estudiar',
+1, 'regular', 'Atrae compradores pragmáticos, pero no construye prestigio ni experiencia diferenciada.', 3
+FROM SimulationContent WHERE id_content_externo = 'fase3_prestigio_experiencia';
+
+INSERT INTO SimulationOption (id_option_externo, id_content, texto, puntaje, nivel, feedback, orden)
+SELECT 'alternativa_peruana', id_content,
+'La alternativa peruana',
+0.5, 'basic', 'No logra diferenciarse ni superar prejuicios. Es probable que las ventas sigan estancadas y la percepción sea débil.', 4
+FROM SimulationContent WHERE id_content_externo = 'fase3_prestigio_experiencia';
+GO
+
+SELECT 1 AS Exito, 'Base de datos del simulador Yachay-Tech completamente poblada' AS Mensaje;
+GO
+
